@@ -1,0 +1,10 @@
+---
+cron: "cron(* * * * ? *)"
+input:
+  tags:
+    - environment: ""
+    - project: ""
+lambda_functions:
+  filter_out_arn: ""
+  policy_arn: ""
+  start_stop_arn: ""
