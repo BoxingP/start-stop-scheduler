@@ -23,7 +23,8 @@ class SchedulerStack(cdk.Stack):
             result_path='$.is_start',
             result_selector={
                 'is_start.$': '$.Payload'
-            }
+            },
+            timeout=cdk.Duration.minutes(3)
         )
 
         filter_out_job = sfn_tasks.LambdaInvoke(
@@ -36,7 +37,8 @@ class SchedulerStack(cdk.Stack):
             result_path='$.instance',
             result_selector={
                 'instance.$': '$.Payload'
-            }
+            },
+            timeout=cdk.Duration.minutes(3)
         )
 
         process_parameter_job = sfn.Pass(
@@ -66,23 +68,27 @@ class SchedulerStack(cdk.Stack):
             self, 'StartRDSFirst',
             lambda_function=start_stop_lambda,
             input_path='$.parameter.rds',
-            result_path=sfn.JsonPath.DISCARD
+            result_path=sfn.JsonPath.DISCARD,
+            timeout=cdk.Duration.minutes(15)
         )
         start_ec2_later = sfn_tasks.LambdaInvoke(
             self, 'StartEC2Later',
             lambda_function=start_stop_lambda,
-            input_path='$.parameter.ec2'
+            input_path='$.parameter.ec2',
+            timeout=cdk.Duration.minutes(5)
         )
         stop_ec2_first = sfn_tasks.LambdaInvoke(
             self, 'StopEC2First',
             lambda_function=start_stop_lambda,
             input_path='$.parameter.ec2',
-            result_path=sfn.JsonPath.DISCARD
+            result_path=sfn.JsonPath.DISCARD,
+            timeout=cdk.Duration.minutes(5)
         )
         stop_rds_later = sfn_tasks.LambdaInvoke(
             self, 'StopRDSLater',
             lambda_function=start_stop_lambda,
-            input_path='$.parameter.rds'
+            input_path='$.parameter.rds',
+            timeout=cdk.Duration.minutes(15)
         )
 
         start_stop_succeeded = sfn.Succeed(self, 'StartStopIsSucceeded')
@@ -96,7 +102,7 @@ class SchedulerStack(cdk.Stack):
             start(is_start_job).next(filter_out_job).next(process_parameter_job).next(start_stop_job)
 
         start_stop_machine = sfn.StateMachine(self, 'StartStopMachine', definition=definition,
-                                              timeout=cdk.Duration.minutes(5))
+                                              timeout=cdk.Duration.minutes(20))
 
         scheduler_event = events.Rule(
             self, "ScheduleRule",
